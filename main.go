@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"image/png"
 	"io"
 	"net/http"
 	"os"
@@ -14,6 +13,7 @@ func main() {
 
 	contentPathPrefix := flag.String("prefix", "/Users/i.nedzvetskiy/go/src/dns-image-gen", "content")
 	origin := flag.String("host", "127.0.0.1:3333", "[host]:port")
+	cacheMb := flag.Int("cache-mb", 256, "memory for rendered images, MB")
 	flag.Parse()
 
 	g := NewGrapher(*contentPathPrefix)
@@ -22,14 +22,7 @@ func main() {
 	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		_, _ = io.WriteString(writer, "Hello world!\n")
 	})
-	mux.HandleFunc("/img", func(writer http.ResponseWriter, request *http.Request) {
-		domain := request.URL.Query().Get("d")
-		dc := g.Draw(domain)
-		err := png.Encode(writer, dc.Image())
-		if err != nil {
-			fmt.Printf("Error on send image %v\n", err)
-		}
-	})
+	mux.Handle("/img", newImageHandler(g, assetsVersion(*contentPathPrefix), *cacheMb<<20))
 	//dc := g.Draw("gems")
 	//
 	//dc.SavePNG("/Users/i.nedzvetskiy/go/src/dns-image-gen/out.png")
